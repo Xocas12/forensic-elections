@@ -1,0 +1,3 @@
+[submodule "packages/forensics_core"]
+	path = packages/forensics_core
+	url = ../forensics-core
