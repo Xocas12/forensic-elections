@@ -1,0 +1,21 @@
+{
+  "generated": "2026-09-26",
+  "commit": "b6e9a4c",
+  "seed": 20260926,
+  "n_mc": 200,
+  "n_boot": 999,
+  "rows": 192924,
+  "tables": [
+    "anchor1_by_region.csv",
+    "anchor1_by_size_band.csv",
+    "anchor1_national.csv",
+    "anchor3_mode_locations.csv",
+    "anchor3_unimodality_test.csv"
+  ],
+  "figures": [
+    "turnout_hist_2011-duma.png",
+    "joint_2011-duma.png",
+    "turnout_hist_2018-presidential.png",
+    "joint_2018-presidential.png"
+  ]
+}

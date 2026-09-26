@@ -334,11 +334,18 @@ RU_ABSENTEE = "\u043e\u0442\u043a\u0440\u0435\u043f\u0438\u0442\u0435\u043b\u044
 
 #: Party-list keywords, 2011, in ballot order: A Just Russia, LDPR, Patriots of Russia, KPRF,
 #: Yabloko, United Russia, Right Cause.
+#:
+#: Two of these were corrected against the real file on first load. The scaffold assumed the
+#: ballot abbreviations "LDPR" and "KPRF", but the 2011 header spells both parties out in
+#: full ("Liberalno-demokraticheskaya partiya Rossii", "Kommunisticheskaya partiya
+#: Rossiyskoy Federatsii") and never uses the abbreviation, so ``verify_header`` rejected
+#: indices 22 and 24. The positions were right; only the tokens were wrong. The distinctive
+#: adjective is used for each, which is what the header actually contains.
 RU_PARTIES: tuple[str, ...] = (
     "\u0421\u041f\u0420\u0410\u0412\u0415\u0414\u041b\u0418\u0412\u0410\u042f \u0420\u041e\u0421\u0421\u0418\u042f",
-    "\u041b\u0414\u041f\u0420",
+    "\u041b\u0438\u0431\u0435\u0440\u0430\u043b\u044c\u043d\u043e-\u0434\u0435\u043c\u043e\u043a\u0440\u0430\u0442\u0438\u0447\u0435\u0441\u043a\u0430\u044f",
     "\u041f\u0410\u0422\u0420\u0418\u041e\u0422\u042b \u0420\u041e\u0421\u0421\u0418\u0418",
-    "\u041a\u041f\u0420\u0424",
+    "\u041a\u043e\u043c\u043c\u0443\u043d\u0438\u0441\u0442\u0438\u0447\u0435\u0441\u043a\u0430\u044f",
     "\u042f\u0411\u041b\u041e\u041a\u041e",
     "\u0415\u0414\u0418\u041d\u0410\u042f \u0420\u041e\u0421\u0421\u0418\u042f",
     "\u041f\u0420\u0410\u0412\u041e\u0415 \u0414\u0415\u041b\u041e",
