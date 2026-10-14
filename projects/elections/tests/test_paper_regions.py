@@ -181,7 +181,8 @@ def test_13_item_2_text_is_generated_from_the_table_it_describes():
 def test_13_results_md_item_2_section_is_what_the_committed_table_generates():
     regions = pd.read_csv(REGION_TABLE)
     expected = "\n".join(_run_analysis().item2_section(regions))
-    text = RESULTS.read_text(encoding="utf-8")
+    # a Windows checkout may hold CRLF; the generated text is joined with LF
+    text = RESULTS.read_text(encoding="utf-8").replace("\r\n", "\n")
     start = text.index("### Regional concentration (anchor item 2)")
     end = text.index("\n## ", start)
     assert text[start:end].strip() == expected.strip()
