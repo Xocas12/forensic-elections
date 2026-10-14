@@ -369,6 +369,12 @@ def main() -> int:
             )
             a("|---|---:|---:|---:|---:|---:|---:|---:|---:|")
             for _, r in sub.iterrows():
+                if int(r.n_tested) == 0:
+                    a(
+                        f"| {r.size_band} | {int(r.n_stations):,} | {int(r.n_excluded_high):,} "
+                        "| 0 | - | - | - | - | n/a |"
+                    )
+                    continue
                 a(
                     f"| {r.size_band} | {int(r.n_stations):,} | {int(r.n_excluded_high):,} | "
                     f"{int(r.n_tested):,} | {r.excess:+.1f} | {r.excess_per_unit:+.4f} | "
@@ -404,13 +410,27 @@ def main() -> int:
             )
         a("")
     a(
-        "Excess per station is a rate, so federal subjects with a few dozen stations can sit "
-        "at the top of it on very little evidence; the `z` column is there to be read next to "
-        "the rank, and the entries that are both high and significant are the large republics "
-        "the literature names. Tatarstan, Dagestan, Bashkortostan, Karachay-Cherkessia and "
-        "Kabardino-Balkaria appear in the top ten with `z` between 4 and 9, which is item 2 of "
-        "the anchor. The autonomous okrugs above them, on 32 to 51 stations, are not evidence "
-        "of anything."
+        "Excess per station is a rate, so federal subjects with few stations can sit at the "
+        "top of it on very little evidence; the `z` column is there to be read next to the "
+        "rank. Within each top ten, computed from the tables above:"
+    )
+    a("")
+    for election in ELECTIONS:
+        top = regions[regions.election == election].head(10)
+        strong = top[top.z >= 4]
+        thin = top[top.n < 100]
+        strong_text = ", ".join(f"{r.region} (z {r.z:.2f})" for _, r in strong.iterrows())
+        thin_text = ", ".join(f"{r.region} ({int(r.n)})" for _, r in thin.iterrows())
+        a(
+            f"- **{LABEL[election]}**: `z` of 4 or more: {strong_text or 'none'}. "
+            f"Tested on fewer than 100 stations, and not evidence of anything on their own: "
+            f"{thin_text or 'none'}."
+        )
+    a("")
+    a(
+        "Whether these are the regions the paper names is anchor item 2. The paper's own "
+        "regional list is not recorded in this repository, so that comparison is not scored "
+        "here."
     )
     a("")
     a("Full table: [`results/anchor1_by_region.csv`](anchor1_by_region.csv).")
