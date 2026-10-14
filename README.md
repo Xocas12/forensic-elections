@@ -25,8 +25,11 @@ than the arithmetic of that station's size allows:
 The finding survives the control that matters. Small stations hit whole percentages honestly,
 so an arithmetic artefact would be largest among them and vanish among large ones. It runs the
 other way: flat below 250 registered voters and rising with station size, strongest at 1,000
-to 5,000. The regions carrying it are the ones the literature names — Tatarstan, Dagestan,
-Bashkortostan, Karachay-Cherkessia, Kabardino-Balkaria.
+to 5,000. Against the paper's own list of the 15 regions with the largest integer peaks
+(Table S4 of its supplement), 5 of the 15 rank in the top ten by excess per station in each
+election, where chance would put about 1.8 (hypergeometric p 0.014 for 2011, 0.012 for 2018).
+That is concentration in the paper's regions beyond chance, not the whole list: several of the
+15 rank in the bottom half in both elections. Every rank is in [RESULTS.md](RESULTS.md).
 
 **Anchor 3 — a second turnout mode** (Klimek et al. 2012). Silverman's critical-bandwidth test
 rejects unimodality in both elections at the bootstrap floor (p = 0.001). The second mode sits
