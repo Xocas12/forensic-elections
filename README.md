@@ -12,21 +12,24 @@ Two of the three validation anchors are reproduced on 192,924 precinct protocols
 caveats: **[RESULTS.md](RESULTS.md)**.
 
 **Anchor 1 — excess mass at integer percentages** (Kobak, Shpilkin and Pshenichnikov 2016).
-Against a per-station binomial null, reported percentages land on whole numbers more often
-than the arithmetic of that station's size allows:
+Against a per-station binomial null, with the paper's exclusion of stations over 99% turnout
+or winner's share, reported percentages land on whole numbers more often than the arithmetic of
+that station's size allows. Beside each excess, the bias the same procedure shows on honest data
+simulated at the observed shares:
 
-| election | quantity | excess stations | z |
-|---|---|---:|---:|
-| 2011 Duma | turnout | +205 | 2.29 |
-| 2011 Duma | winner's share | +741 | 8.42 |
-| 2018 presidential | turnout | +1,089 | 12.15 |
-| 2018 presidential | winner's share | +845 | 10.68 |
+| election | quantity | excess stations | honest-data bias | z |
+|---|---|---:|---:|---:|
+| 2011 Duma | turnout | +408 | -18 ± 27 | 4.58 |
+| 2011 Duma | winner's share | +763 | +2 ± 27 | 9.18 |
+| 2018 presidential | turnout | +1,203 | -65 ± 20 | 13.12 |
+| 2018 presidential | winner's share | +840 | -42 ± 18 | 9.01 |
 
 The finding survives the control that matters. Small stations hit whole percentages honestly,
 so an arithmetic artefact would be largest among them and vanish among large ones. It runs the
 other way: flat below 250 registered voters and rising with station size, strongest at 1,000
-to 5,000. The regions carrying it are the ones the literature names — Tatarstan, Dagestan,
-Bashkortostan, Karachay-Cherkessia, Kabardino-Balkaria.
+to 5,000. Tatarstan, Dagestan and Bashkortostan are in the top ten regions by excess per
+station in both elections, with z between 4.9 and 11.7; whether that matches the paper's own
+regional list is not yet checked.
 
 **Anchor 3 — a second turnout mode** (Klimek et al. 2012). Silverman's critical-bandwidth test
 rejects unimodality in both elections at the bootstrap floor (p = 0.001). The second mode sits

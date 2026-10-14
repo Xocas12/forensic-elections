@@ -44,8 +44,22 @@ dataset is on Figshare (DOI 10.6084/m9.figshare.3126883.v2, CC BY 4.0) and cover
 2000–2012 plus Poland 2010 and Spain 2011 in a reduced ten-column format.
 
 **Method.** `forensics_core.digits.integer_pct.integer_excess`, whose Monte-Carlo null redraws
-each precinct's numerator as Binomial(registered voters, observed share). This is the paper's
-own null model.
+each precinct's numerator as Binomial(denominator, observed share), applied after the paper's
+exclusion: every precinct whose turnout or winner's share is over 99 % is dropped before
+counting (Kobak et al. 2016, section 3.1), and the number dropped is reported next to the
+number the 100-voter floor drops. The redraw together with that exclusion is the paper's null
+model. Every national and size-band row is printed beside the bias the same procedure shows
+on honest data simulated at the observed shares and real denominators, so that any
+calibration error that remains is visible rather than assumed away.
+
+*Changed 2026-10-15.* This paragraph used to read: "whose Monte-Carlo null redraws each
+precinct's numerator as Binomial(registered voters, observed share). This is the paper's own
+null model." That left out the over-99 % exclusion. Without it the null over-predicts integer
+hits at 100 % (100 % is always an integer, and every precinct at 97-99.9 % can be redrawn
+onto it), so the excess was biased low: most of all in the smallest size band, where it
+produced a significant deficit on turnout, and in regions with near-complete turnout. The
+exclusion removes most of that bias but not all of it, which is why the honest-data bias is
+printed.
 
 **What counts as reproduced.** A significant positive excess in 2011 and 2018 nationally; the
 excess concentrated in the same regions the paper names; and the excess vanishing when the
