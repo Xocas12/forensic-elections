@@ -1,9 +1,12 @@
 {
-  "generated": "2026-09-26",
-  "commit": "36c9171",
+  "generated": "2026-10-15",
+  "commit": "93b1f95",
   "seed": 20260926,
   "n_mc": 200,
   "n_boot": 999,
+  "anchor1_exclude_over_pct": 99.0,
+  "anchor1_honest_bias_n_rep": 20,
+  "anchor1_honest_bias_n_mc": 50,
   "rows": 192924,
   "tables": [
     "anchor1_by_region.csv",
