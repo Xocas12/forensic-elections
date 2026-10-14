@@ -22,6 +22,38 @@
 # Regenerate the acquisition state with `make data`; edit provenance here by hand only with
 # a note saying what was re-checked and when.
 
+- id: arxiv_kobak_1410_6059v4
+  name: Kobak, Shpilkin & Pshenichnikov, 'Integer percentages as electoral falsification fingerprints',
+    arXiv:1410.6059v4 (paper with its supplementary figures and tables)
+  provider: arXiv
+  url: https://arxiv.org/pdf/1410.6059v4
+  access: free
+  status: verified
+  fetched_at: '2026-10-14T21:43:31Z'
+  http_status: 200
+  sha256: 7e4b6f82160356a841f5dec640365bd1e5e6142cfb9afc3114ca561df36897b9
+  bytes: 1474280
+  local_path: null
+  license: null
+  notes: 'arXiv version 4, stamped [stat.AP] 29 Jun 2016, headed ''Submitted to the Annals of Applied
+    Statistics''; authors Dmitry Kobak, Sergey Shpilkin and Maxim S. Pshenichnikov. Read for anchor 1
+    item 2. Page 22 holds Table S4, ''Top 15 regions contributing to the integer anomaly'': ISO code,
+    region name and maximal integer anomaly in thousands, from Dagestan (87) to Chechnya (18). Its
+    caption defines the peak as the maximum over all years, over turnout and leader''s result, and over
+    integer percentages from 70% to 99%, measured relative to the mean Monte Carlo value. Page 21 (Fig.
+    S3) shows the per-year amplitudes for the 83 regions. Transcribed into docs/validation_anchors.md
+    and elections.analysis.integer_percentage.PAPER_TOP_REGIONS. The page numbers are those printed
+    on the arXiv PDF; the journal version was not compared.'
+  blocked_reason: null
+  evidence: |-
+    curl -sS -L https://arxiv.org/pdf/1410.6059v4 -> 200, 1,474,280 bytes, application/pdf, sha256 7e4b6f82160356a841f5dec640365bd1e5e6142cfb9afc3114ca561df36897b9. Page 1 title and arXiv stamp read; pages 21-22 (Fig. S3 and Table S4) read in full.
+  download_plan: |-
+    curl -sS -L -o kobak_1410.6059v4.pdf https://arxiv.org/pdf/1410.6059v4 ; verify sha256. Reference reading only; nothing in the pipeline parses it.
+  verification:
+    verdict: not_verified
+    reason: no second check has run for this id
+    checked_at: null
+    hunt: null
 - id: cecscraper_github
   name: kkalininMI/CECscraper (R package for scraping the CEC portal)
   provider: GitHub (Kirill Kalinin)

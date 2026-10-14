@@ -6,15 +6,15 @@ in `fetch_log.jsonl` once `make data` has run.
 
 ## Summary
 
-All 26 sources in `SOURCES.yaml` are free; none is paywalled or registration-gated.
+All 27 sources in `SOURCES.yaml` are free; none is paywalled or registration-gated.
 
 | Status | Count |
 |---|---|
-| Verified (fetched, HTTP 200 or 206, content confirmed) | 14 |
+| Verified (fetched, HTTP 200 or 206, content confirmed) | 15 |
 | Partial (reached, but the full dataset was not confirmed) | 6 |
 | Blocked (exists, cannot be fetched from here) | 4 |
 | Unverified (could not be confirmed at all) | 2 |
-| **Total** | **26** |
+| **Total** | **27** |
 
 `tests/test_access_notes_counts.py` recomputes these from the registry and fails if they drift.
 
@@ -132,13 +132,15 @@ first.
 
 ## Reachable, but deliberately left without an acquirer
 
-Added when the acquisition modules were written. These eight sources are free and reachable;
+Added when the acquisition modules were written, and extended since. These nine sources are
+free and reachable;
 `python -m elections.acquire --list` shows them unmarked and `--all` reports them as "no
 acquirer implemented for this id". That is a decision, not an oversight, and the reason is
 per source:
 
 | Source | Why no acquirer |
 |---|---|
+| `arxiv_kobak_1410_6059v4` | The Kobak et al. paper itself, held for its Table S4 (the item-2 benchmark of anchor 1), which is transcribed into `docs/validation_anchors.md`. Reference reading; nothing in the pipeline parses it. |
 | `cecscraper_github` | An R scraping tool, not data, and the portal it targets is unreachable and captcha-gated. Its registry URL is an HTML repository page. |
 | `dkobak_elections_github` | The repository landing page. The three artefacts worth holding have their own registry entries (`dkobak_elections_2011`, `_2018`, `_data_readme`) and all three are acquired. |
 | `gislab_cik_uik_20140404_head` | A HEAD probe recording a negative result: the earliest commission snapshot is April 2014, and the entry's own conclusion is that it cannot be back-joined to 2011 precinct numbers. Downloading it would contradict what the entry establishes. |

@@ -29,13 +29,13 @@ with the actual failures in [data/ACCESS_NOTES.md](data/ACCESS_NOTES.md).
 
 | Status | Sources |
 |---|---|
-| Verified | 14 |
+| Verified | 15 |
 | Partial | 6 |
 | Blocked | 4 |
 | Unverified | 2 |
-| **Total** | **26** |
+| **Total** | **27** |
 
-All 26 are free: nothing in this project is paywalled or registration-gated.
+All 27 are free: nothing in this project is paywalled or registration-gated.
 
 The registry is [data/SOURCES.yaml](data/SOURCES.yaml). Nothing enters a pipeline without an
 entry there.
@@ -69,8 +69,8 @@ holds stubs with fixed signatures only, and every one of them raises `NotImpleme
 
 | Layer | State |
 |---|---|
-| `data/SOURCES.yaml` | 26 sources, written from verified fetches |
-| `src/elections/acquire/` | acquirers for 12 sources; the other 14 are blocked, unverified, or reference material a machine should not fetch |
+| `data/SOURCES.yaml` | 27 sources, written from verified fetches |
+| `src/elections/acquire/` | acquirers for 12 sources; the other 15 are blocked, unverified, or reference material a machine should not fetch |
 | `src/elections/clean/` | column map, loader, derived quantities, acceptance checks that raise |
 | `src/elections/features/` | precinct-size bands and the size-conditioning helpers |
 | `src/elections/analysis/` | stubs only, one module per validation anchor |

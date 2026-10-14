@@ -75,6 +75,163 @@ def _fmt_p(p: float | None) -> str:
     return f"{p:.4f}"
 
 
+def _join(items: list[str], sep: str = ", ") -> str:
+    """'a', 'a and b', 'a, b and c'; 'none' for an empty list.
+
+    ``sep="; "`` for items that contain commas themselves, as the paper's region names do.
+    """
+    if not items:
+        return "none"
+    if len(items) == 1:
+        return items[0]
+    return sep.join(items[:-1]) + " and " + items[-1]
+
+
+def item2_section(regions: pd.DataFrame) -> list[str]:
+    """The report's section on anchor 1 item 2, built from the regional table alone.
+
+    Every region name, rank, station count and ``z`` in it is read from ``regions`` (the
+    output of ``integer_percentage_excess_by_region`` for each election), and the comparison
+    with the paper's Table S4 is computed from it, so the text cannot say something the table
+    does not. A test regenerates this section from the committed
+    ``results/anchor1_by_region.csv`` and requires ``RESULTS.md`` to match it.
+    """
+    from elections.analysis.integer_percentage import (
+        PAPER_OVERLAP_ALPHA,
+        PAPER_TOP_REGIONS,
+        PAPER_TOP_TEN,
+        paper_region_overlap,
+        paper_region_ranks,
+    )
+
+    ranks = paper_region_ranks(regions)
+    overlap = paper_region_overlap(regions)
+    elections = [e for e in ELECTIONS if e in set(regions["election"])]
+    paper_names = {name for p in PAPER_TOP_REGIONS for name in p.table_names}
+    n_paper = len(PAPER_TOP_REGIONS)
+
+    lines: list[str] = []
+    a = lines.append
+    a("### Regional concentration (anchor item 2)")
+    a("")
+    a(
+        f"Item 2 asks for the excess to be concentrated in the regions the paper names. The "
+        f"paper's list is Table S4 of its supplement: the {n_paper} regions with the largest "
+        "integer peak, recorded with its source in `docs/validation_anchors.md` together with "
+        f"the comparison fixed for it. That comparison is how many of the {n_paper} fall in the "
+        f"top {PAPER_TOP_TEN} here by excess per station on the winner's share, against the "
+        "hypergeometric chance of at least that many, with the median rank of the list beside "
+        "it. With roughly 85 federal subjects several reject by chance, so the claim is a "
+        "ranking and not a count (known trap 6)."
+    )
+    a("")
+    a(
+        "Two caveats go with it. Table S4 ranks a different statistic, the height of the "
+        "largest integer peak over all elections from 2000 to 2012, over turnout and the "
+        "leader's result, and over integers from 70 to 99 per cent; this ranking is excess per "
+        "station on one quantity in one election. And the paper's data end in 2012, so for "
+        "2018 its list is an extrapolation."
+    )
+    a("")
+    a(
+        f"| election | regions ranked | Table S4 regions in top {PAPER_TOP_TEN} | expected by "
+        "chance | p (hypergeometric, one-sided) | median rank of Table S4 regions |"
+    )
+    a("|---|---:|---:|---:|---:|---:|")
+    for election in elections:
+        o = overlap.loc[overlap.election == election].iloc[0]
+        a(
+            f"| {LABEL[election]} | {int(o.n_regions)} | {int(o.overlap)} of {int(o.n_paper)} | "
+            f"{o.expected_overlap:.1f} | {_fmt_p(o.pvalue)}{_stars(o.pvalue)} | "
+            f"{o.median_rank:g} |"
+        )
+    a("")
+    a("Where each Table S4 region ranks (rank, then `z`):")
+    a("")
+    header = "| ISO | Table S4 region | " + " | ".join(f"{LABEL[e]} rank | z" for e in elections)
+    a(header + " |")
+    a("|---|---|" + "---:|---:|" * len(elections))
+    for paper in PAPER_TOP_REGIONS:
+        cells = []
+        for election in elections:
+            r = ranks.loc[(ranks.election == election) & (ranks.iso == paper.iso)].iloc[0]
+            cells.append(f"{int(r['rank'])} of {int(r.n_regions)} | {r.z:.2f}")
+        a(f"| {paper.iso} | {paper.paper_name} | " + " | ".join(cells) + " |")
+    a("")
+
+    a(f"Top {PAPER_TOP_TEN} by excess per station, winner's share:")
+    a("")
+    for election in elections:
+        sub = regions[regions.election == election].sort_values("rank").head(PAPER_TOP_TEN)
+        a(f"**{LABEL[election]}**")
+        a("")
+        a("| rank | region | stations | excess per station | z | p | in Table S4 |")
+        a("|---:|---|---:|---:|---:|---:|---|")
+        for _, r in sub.iterrows():
+            listed = "yes" if r.region in paper_names else ""
+            a(
+                f"| {int(r['rank'])} | {r.region} | {int(r.n):,} | "
+                f"{r.excess_per_unit:+.4f} | {r.z:.2f} | {_fmt_p(r.pvalue)}{_stars(r.pvalue)} | "
+                f"{listed} |"
+            )
+        a("")
+
+    reproduced: list[str] = []
+    not_reproduced: list[str] = []
+    for election in elections:
+        o = overlap.loc[overlap.election == election].iloc[0]
+        r = ranks.loc[ranks.election == election].sort_values("rank")
+        top = regions[regions.election == election].sort_values("rank").head(PAPER_TOP_TEN)
+        high = [f"{x.paper_name} ({int(x['rank'])})" for _, x in r[r.in_top].iterrows()]
+        low = [
+            f"{x.paper_name} ({int(x['rank'])})"
+            for _, x in r[r["rank"] > o.n_regions / 2].iterrows()
+        ]
+        others = [
+            f"{x.region} (rank {int(x['rank'])}, z {x.z:.2f})"
+            for _, x in top.iterrows()
+            if x.region not in paper_names
+        ]
+        weak = [
+            f"{x.region} ({int(x.n):,} stations, z {x.z:.2f})"
+            for _, x in top.iterrows()
+            if not (x.pvalue < PAPER_OVERLAP_ALPHA)
+        ]
+        a(
+            f"**{LABEL[election]}.** {int(o.overlap)} of the {int(o.n_paper)} Table S4 regions "
+            f"are in the top {PAPER_TOP_TEN}: {_join(high, '; ')}. Chance would put "
+            f"{o.expected_overlap:.1f} there (p = {_fmt_p(o.pvalue)}). The median rank of the "
+            f"list is {o.median_rank:g} of {int(o.n_regions)}, and these Table S4 regions sit "
+            f"in the bottom half of the ranking: {_join(low, '; ')}. Top-{PAPER_TOP_TEN} entries not "
+            f"on the list: {_join(others, '; ')}. Top-{PAPER_TOP_TEN} entries that do not reach "
+            f"p < {PAPER_OVERLAP_ALPHA:g} on their own, because excess per station is a rate "
+            f"and a small region can rank high on little evidence: {_join(weak, '; ')}."
+        )
+        a("")
+        (reproduced if o.pvalue < PAPER_OVERLAP_ALPHA else not_reproduced).append(LABEL[election])
+
+    verdict = (
+        f"By the rule fixed in `docs/validation_anchors.md` (overlap more than chance at "
+        f"one-sided p < {PAPER_OVERLAP_ALPHA:g}), item 2 holds in {_join(reproduced)}"
+    )
+    verdict += f" and fails in {_join(not_reproduced)}." if not_reproduced else "."
+    a(
+        verdict + " Where it holds, it says that the paper's regions are over-represented at "
+        "the top of this ranking, not that each of them ranks high: the table of ranks "
+        "above shows which do and which do not."
+    )
+    a("")
+    a(
+        "Full table: [`results/anchor1_by_region.csv`]"
+        "(projects/elections/results/anchor1_by_region.csv); the Table S4 comparison: "
+        "[`results/anchor1_paper_regions.csv`](projects/elections/results/anchor1_paper_regions.csv)"
+        " and [`results/anchor1_paper_overlap.csv`]"
+        "(projects/elections/results/anchor1_paper_overlap.csv)."
+    )
+    a("")
+    return lines
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--n-mc", type=int, default=200, help="Monte Carlo draws for anchor 1")
@@ -95,6 +252,8 @@ def main() -> int:
         integer_percentage_excess,
         integer_percentage_excess_by_region,
         integer_percentage_excess_by_size_band,
+        paper_region_overlap,
+        paper_region_ranks,
     )
     from elections.analysis.turnout_bimodality import (
         MODE_BANDWIDTH_PP,
@@ -157,6 +316,8 @@ def main() -> int:
         ignore_index=True,
     )
     regions.to_csv(OUT / "anchor1_by_region.csv", index=False)
+    paper_region_ranks(regions).to_csv(OUT / "anchor1_paper_regions.csv", index=False)
+    paper_region_overlap(regions).to_csv(OUT / "anchor1_paper_overlap.csv", index=False)
 
     # ---------------------------------------------------------------- anchor 3
     bimodal_rows = []
@@ -317,37 +478,7 @@ def main() -> int:
     )
     a("")
 
-    a("### Regional concentration (anchor item 2)")
-    a("")
-    a(
-        "With roughly 85 federal subjects several reject by chance, so the claim is a ranking "
-        "and not a count (known trap 6). Top ten by excess per station, winner's share:"
-    )
-    a("")
-    for election in ELECTIONS:
-        sub = regions[regions.election == election].head(10)
-        a(f"**{LABEL[election]}**")
-        a("")
-        a("| rank | region | stations | excess per station | z |")
-        a("|---:|---|---:|---:|---:|")
-        for _, r in sub.iterrows():
-            a(
-                f"| {int(r['rank'])} | {r.region} | {int(r.n):,} | "
-                f"{r.excess_per_unit:+.4f} | {r.z:.2f} |"
-            )
-        a("")
-    a(
-        "Excess per station is a rate, so federal subjects with a few dozen stations can sit "
-        "at the top of it on very little evidence; the `z` column is there to be read next to "
-        "the rank, and the entries that are both high and significant are the large republics "
-        "the literature names. Tatarstan, Dagestan, Bashkortostan, Karachay-Cherkessia and "
-        "Kabardino-Balkaria appear in the top ten with `z` between 4 and 9, which is item 2 of "
-        "the anchor. The autonomous okrugs above them, on 32 to 51 stations, are not evidence "
-        "of anything."
-    )
-    a("")
-    a("Full table: [`results/anchor1_by_region.csv`](anchor1_by_region.csv).")
-    a("")
+    lines.extend(item2_section(regions))
 
     a("## Anchor 3 — a second mode in the turnout distribution")
     a("")

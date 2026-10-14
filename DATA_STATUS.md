@@ -5,6 +5,9 @@ this file was produced by reading that registry with a YAML parser and counting,
 copying a number out of prose. Where the registry and a README disagree, the registry wins;
 see [Registry against prose](#registry-against-prose).
 
+The counts were brought up to date on 2026-10-14, when `arxiv_kobak_1410_6059v4` (the
+Kobak et al. paper, read for the anchor-1 item-2 benchmark) was added to the registry.
+
 ## What this session did, and did not do
 
 This session did scaffolding and acquisition wiring only. It read the source registry, the
@@ -23,28 +26,28 @@ filling it from memory. Nothing under `packages/forensics_core` was edited, and 
 
 ## Summary
 
-26 sources, one project.
+27 sources, one project.
 
 | project   | verified | partial | blocked | unverified | total | with an acquirer | in a gated tier |
 |-----------|----------|---------|---------|------------|-------|------------------|-----------------|
-| elections | 14       | 6       | 4       | 2          | 26    | 12               | 0               |
+| elections | 15       | 6       | 4       | 2          | 27    | 12               | 0               |
 
 | project   | free | total |
 |-----------|------|-------|
-| elections | 26   | 26    |
+| elections | 27   | 27    |
 
 **Every source in this project is free.** Nothing here is paywalled, registration-gated, or
 behind an archive visit. That is unusual in this programme and is why `elections` is the
 calibration project that runs first.
 
-Independent second-pass verification: **14 confirmed, 1 refuted, 11 not
+Independent second-pass verification: **14 confirmed, 1 refuted, 12 not
 checked**. The refuted entry is `notelections_online_mirror`, kept in the registry at status
 `unverified` rather than deleted, so that the next person who finds the same search result
 does not repeat the attempt.
 
-Acquirer coverage: **12 of 26** entries have an acquirer (10 verified,
-2 partial). The other 14 have none: 8 are free and
-reachable and are deliberately left alone (an R scraping tool, repository landing pages, two
+Acquirer coverage: **12 of 27** entries have an acquirer (10 verified,
+2 partial). The other 15 have none: 9 are free and
+reachable and are deliberately left alone (the Kobak et al. paper, read for its Table S4, an R scraping tool, repository landing pages, two
 recorded negative searches, a HEAD probe recording a negative result, and lower-priority
 duplicate snapshots), 4 are blocked, and 2 were never confirmed to exist. The reason
 per source is in `data/ACCESS_NOTES.md`.
@@ -56,6 +59,7 @@ asterisk column of `python -m elections.acquire --list`.
 
 | id                                 | project   | access tier | status     | acquirer | 2nd-pass check |
 |------------------------------------|-----------|-------------|------------|----------|----------------|
+| `arxiv_kobak_1410_6059v4`          | elections | free        | verified   | no       | not checked    |
 | `cecscraper_github`                | elections | free        | verified   | no       | confirmed      |
 | `cikrf_eng_2018_wayback`           | elections | free        | verified   | yes      | confirmed      |
 | `dkobak_elections_2011`            | elections | free        | verified   | yes      | not checked    |
@@ -162,9 +166,9 @@ replicating one published signature and replicating three.
 ## Registry against prose
 
 Every count in `projects/elections/README.md` and `projects/elections/data/ACCESS_NOTES.md`
-was checked against the registry and **all of them agree**: 26 sources, all free,
-14 verified / 6 partial / 4 blocked / 2 unverified, 12 with an acquirer,
-8 free and reachable with none by choice. No discrepancy was found, and
+was checked against the registry and **all of them agree**: 27 sources, all free,
+15 verified / 6 partial / 4 blocked / 2 unverified, 12 with an acquirer,
+9 free and reachable with none by choice. No discrepancy was found, and
 nothing in this file needed to override the project's own prose.
 
 ## Operational note

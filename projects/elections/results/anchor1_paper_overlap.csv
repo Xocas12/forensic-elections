@@ -1,0 +1,3 @@
+election,n_regions,n_paper,top,overlap,expected_overlap,pvalue,median_rank
+2011-duma,84,15,10,5,1.7857142857142858,0.013918262217065071,20.0
+2018-presidential,87,15,10,5,1.7241379310344827,0.011889341442967244,28.0
