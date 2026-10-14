@@ -75,10 +75,161 @@ def _fmt_p(p: float | None) -> str:
     return f"{p:.4f}"
 
 
+#: Modes with less than this share of the weight within 2.5 points are left out of the printed
+#: table (they stay in the CSV), and the report says which ones were left out.
+MIN_SHOWN_MASS = 0.01
+
+#: "Near complete turnout", in percentage points below 100.
+NEAR_COMPLETE_PP = 2.0
+
+
+def unimodality_verdict_lines(bimodal: pd.DataFrame, n_boot: int) -> list[str]:
+    """The sentence under the unimodality table, read off the p-values rather than assumed."""
+    floor = 1.0 / (n_boot + 1)
+    rejected = [LABEL[r.election] for _, r in bimodal.iterrows() if r.pvalue < 0.05]
+    kept = [LABEL[r.election] for _, r in bimodal.iterrows() if r.pvalue >= 0.05]
+    if not kept:
+        verdict = "Unimodality is rejected at 5% in both elections."
+    elif not rejected:
+        verdict = "Unimodality is not rejected at 5% in either election."
+    else:
+        verdict = (
+            f"Unimodality is rejected at 5% in the {', '.join(rejected)} and not in the "
+            f"{', '.join(kept)}."
+        )
+    at_floor = bool(np.isclose(bimodal["pvalue"].to_numpy(dtype=float), floor).all())
+    return [
+        f"{verdict} `p` cannot go below 1/({n_boot}+1) by construction"
+        + (", and it is at that floor in both." if at_floor else ".")
+        + " The test counts modes at its own critical bandwidth; it says nothing about where "
+        "they are, which is what the next section reports."
+    ]
+
+
+def mode_location_lines(
+    mode_table: pd.DataFrame, location: pd.DataFrame, n_boot_location: int
+) -> list[str]:
+    """The anchor-3 location table and the sentences about it, all read off ``mode_table``.
+
+    ``location`` is one row per election and weighting from
+    :func:`elections.analysis.turnout_bimodality.high_mode_location_interval`.
+    """
+    out: list[str] = []
+    a = out.append
+    shown = mode_table.loc[mode_table["mass_within_2_5pp"] >= MIN_SHOWN_MASS]
+    hidden = mode_table.loc[mode_table["mass_within_2_5pp"] < MIN_SHOWN_MASS]
+
+    a("| election | weighting | mode turnout % | winner's share there % | mass within 2.5pp |")
+    a("|---|---|---:|---:|---:|")
+    for _, r in shown.iterrows():
+        where = f"{r.mode_turnout_pct:.1f}" + (" (boundary)" if r.at_boundary else "")
+        a(
+            f"| {LABEL[r.election]} | {r.weight_by} | {where} | "
+            f"{r.winner_share_at_mode_pct:.1f} | {r.mass_within_2_5pp:.3f} |"
+        )
+    a("")
+    if not hidden.empty:
+        listed = "; ".join(
+            f"{LABEL[r.election]}, {r.weight_by}, at {r.mode_turnout_pct:.1f}"
+            for _, r in hidden.iterrows()
+        )
+        a(
+            f"Modes carrying less than {MIN_SHOWN_MASS:.0%} of the weight within 2.5 points are "
+            "not shown. They are tail wiggles, and they stay in "
+            f"[`results/anchor3_mode_locations.csv`](anchor3_mode_locations.csv): {listed}."
+        )
+        a("")
+
+    a(
+        "For each election and weighting, the principal mode (the one carrying most mass) and "
+        "the highest-turnout mode, with a station bootstrap of the latter's location "
+        f"({n_boot_location} resamples, 95% percentile interval):"
+    )
+    a("")
+    highs: list[float] = []
+    gaps: list[float] = []
+    n_cases = 0
+    for election in mode_table["election"].drop_duplicates():
+        for weighting in ("registered", "stations"):
+            sub = shown[(shown.election == election) & (shown.weight_by == weighting)]
+            if sub.empty:
+                continue
+            n_cases += 1
+            principal = sub.loc[sub["mass_within_2_5pp"].idxmax()]
+            high = sub.loc[sub["mode_turnout_pct"].idxmax()]
+            head = f"- **{LABEL[election]}, {weighting}**: "
+            if high.name == principal.name:
+                a(
+                    head + f"one mode, at {principal.mode_turnout_pct:.1f}% turnout "
+                    f"(winner {principal.winner_share_at_mode_pct:.1f}%); no second mode."
+                )
+                continue
+            highs.append(float(high.mode_turnout_pct))
+            gaps.append(float(high.winner_share_at_mode_pct - principal.winner_share_at_mode_pct))
+            others = sub.drop(index=[principal.name, high.name])
+            middle = "".join(
+                f"; another at {r.mode_turnout_pct:.1f}% (winner {r.winner_share_at_mode_pct:.1f}%)"
+                for _, r in others.iterrows()
+            )
+            text = (
+                head + f"principal mode at {principal.mode_turnout_pct:.1f}% turnout (winner "
+                f"{principal.winner_share_at_mode_pct:.1f}%){middle}; highest-turnout mode at "
+                f"{high.mode_turnout_pct:.1f}%"
+                + (", a maximum at the boundary" if high.at_boundary else "")
+                + f" (winner {high.winner_share_at_mode_pct:.1f}%)."
+            )
+            loc = location[(location.election == election) & (location.weight_by == weighting)]
+            if not loc.empty:
+                loc = loc.iloc[0]
+                text += (
+                    f" Bootstrap interval for its location: [{loc.ci_low:.1f}, "
+                    f"{loc.ci_high:.1f}]; {loc.share_at_boundary:.0%} of resamples put it at 100."
+                )
+            a(text)
+    a("")
+    if not highs:
+        a(f"None of the {n_cases} election-and-weighting cases shows a second mode.")
+        a("")
+        return out
+    near = sum(h >= 100.0 - NEAR_COMPLETE_PP for h in highs)
+    second = (
+        f"There is a second mode in {len(highs)} of the {n_cases} election-and-weighting cases"
+        if len(highs) < n_cases
+        else f"There is a second mode in all {n_cases} election-and-weighting cases"
+    )
+    near_text = (
+        "in every one of them it lies"
+        if near == len(highs)
+        else f"in {near} of them the highest-turnout mode lies"
+    )
+    spread = (
+        f"all at {highs[0]:.1f}"
+        if min(highs) == max(highs)
+        else f"from {min(highs):.1f} to {max(highs):.1f}"
+    )
+    a(
+        f"{second}, and {near_text} within {NEAR_COMPLETE_PP:g} points of complete turnout "
+        f"(highest-turnout modes {spread}). The winner's share "
+        "there differs from the share at the principal mode by "
+        f"{min(gaps):+.1f} to {max(gaps):+.1f} points. That joint location, not the "
+        "bimodality, is what the anchor claims. It is an estimate at a fixed "
+        "bandwidth with the station-bootstrap interval above, not a test: the unimodality test "
+        "says nothing about where the second mode is."
+    )
+    a("")
+    return out
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--n-mc", type=int, default=200, help="Monte Carlo draws for anchor 1")
     parser.add_argument("--n-boot", type=int, default=999, help="bootstrap resamples for anchor 3")
+    parser.add_argument(
+        "--n-boot-location",
+        type=int,
+        default=199,
+        help="station bootstrap resamples for the location of anchor 3's highest-turnout mode",
+    )
     parser.add_argument("--seed", type=int, default=20260926)
     parser.add_argument("--no-figures", action="store_true")
     args = parser.parse_args()
@@ -98,6 +249,7 @@ def main() -> int:
     )
     from elections.analysis.turnout_bimodality import (
         MODE_BANDWIDTH_PP,
+        high_mode_location_interval,
         turnout_bimodality_test,
         turnout_mode_locations,
     )
@@ -179,6 +331,20 @@ def main() -> int:
     bimodal.to_csv(OUT / "anchor3_unimodality_test.csv", index=False)
     mode_table = pd.concat(modes, ignore_index=True)
     mode_table.to_csv(OUT / "anchor3_mode_locations.csv", index=False)
+    location = pd.DataFrame(
+        [
+            high_mode_location_interval(
+                tidy,
+                election=election,
+                weight_by=weighting,
+                n_boot=args.n_boot_location,
+                seed=args.seed,
+            )
+            for election in ELECTIONS
+            for weighting in ("registered", "stations")
+        ]
+    ).drop(columns="caveat")
+    location.to_csv(OUT / "anchor3_high_mode_location.csv", index=False)
 
     # ---------------------------------------------------------------- figures
     figures_written: list[str] = []
@@ -356,7 +522,10 @@ def main() -> int:
         "exclusion rule (electorate below 100). The paper asserts a second mode but supplies "
         "no test for one, so the test is named here rather than inherited: Silverman's "
         "critical-bandwidth statistic (1981), the smallest Gaussian bandwidth at which the "
-        "kernel density of turnout still has one mode, against a smoothed bootstrap."
+        "kernel density of turnout still has one mode, against a smoothed bootstrap. "
+        "Turnout is bounded, so the density is reflected at 0 and 100 and a maximum at either "
+        "end counts as a mode; bootstrap draws pushed past an end are reflected back rather "
+        "than clipped."
     )
     a("")
     a("| election | critical bandwidth (pp) | p | stations | excluded |")
@@ -368,36 +537,20 @@ def main() -> int:
             f"{int(r.n_excluded_small):,} |"
         )
     a("")
-    a(
-        f"Unimodality is rejected in both. `p` cannot go below 1/({args.n_boot}+1) by "
-        "construction, and it is at that floor."
-    )
+    lines.extend(unimodality_verdict_lines(bimodal, args.n_boot))
     a("")
     a("### Where the modes are")
     a("")
     a(
         f"Located with a {MODE_BANDWIDTH_PP:g}-point bandwidth, which is deliberately wider "
         "than the one-point period of the sawtooth anchor 1 just established: a narrower "
-        "kernel resolves the sawtooth's teeth and reports them as a row of modes."
+        "kernel resolves the sawtooth's teeth and reports them as a row of modes. The density "
+        "is reflected at 0 and 100, so a density still rising at complete turnout peaks at "
+        "100 and is reported there, rather than as an interior maximum pulled a few points "
+        "inward. For a mode at 100 the 2.5-point window is one-sided: turnout in [97.5, 100]."
     )
     a("")
-    a("| election | weighting | mode turnout % | winner's share there % | mass within 2.5pp |")
-    a("|---|---|---:|---:|---:|")
-    for _, r in mode_table.iterrows():
-        if r.mass_within_2_5pp < 0.01:
-            continue
-        a(
-            f"| {LABEL[r.election]} | {r.weight_by} | {r.mode_turnout_pct:.1f} | "
-            f"{r.winner_share_at_mode_pct:.1f} | {r.mass_within_2_5pp:.3f} |"
-        )
-    a("")
-    a(
-        "In both elections there is a principal mode at ordinary turnout and a second mode "
-        "within two points of complete turnout, and the winner's share at the near-100 per "
-        "cent mode is far above the winner's share at the principal one. That is the anchor's "
-        "claim, and it is the joint location, not the bimodality, that carries it."
-    )
-    a("")
+    lines.extend(mode_location_lines(mode_table, location, args.n_boot_location))
     a(
         "**Known trap 2 applies and is not resolved here.** Bimodality alone is not evidence "
         "of falsification: urban and rural heterogeneity, and republics with different "
