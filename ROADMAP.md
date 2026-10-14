@@ -146,9 +146,9 @@ tables and its output is in [`RESULTS.md`](RESULTS.md), not that code exists for
 | 5 | Extract the Poland and Spain control tables | P1 | open - the only genuine external false-positive controls the programme has |
 | 6 | Expose elections as the substrate for the power atlas and aggregation ladder | P1 | open - needs a large sample with a real hierarchy, and this is the only such dataset here |
 | 7 | Populate the elections notch catalogue | P1 | open - round vote shares and round turnout are this project's instance of the unifying hypothesis |
-| 8 | Replicate the integer-percentage sawtooth, conditioned on precinct size | P2 | **done** - anchor 1; significant on both quantities in both elections, and the excess rises with station size |
+| 8 | Replicate the integer-percentage sawtooth, conditioned on precinct size | P2 | **partial failure** - anchor 1, run before G1; item 1 met (significant on both quantities in both elections, the excess rises with station size), item 2 partial, item 3 (Poland/Spain control) not run, blocked on task 5 |
 | 9 | Replicate the comet tail | P2 | blocked on task 4 - the estimator has not been read from a primary source, and the function says so |
-| 10 | Replicate turnout bimodality | P2 | **done** - anchor 3; unimodality rejected at the bootstrap floor, second mode within two points of complete turnout |
+| 10 | Replicate turnout bimodality | P2 | **run, confound check outstanding** - anchor 3, run before G1; unimodality rejected at the bootstrap floor, second mode near complete turnout; the `heterogeneous_mixture` calibration and the external controls have not run |
 | 11 | Decompose detection power by method family | P2 | open - the project's actual research question, and the reason the anchors come first |
 
 Task 11 is the research contribution. Tasks 8 and 10 reproduce what the literature already
@@ -176,7 +176,11 @@ cites rule 5 and `eval/harness.py` cites rule 9 by number.
 
 ## Where this stands
 
-The elections calibration project has been run: see [`RESULTS.md`](RESULTS.md). Anchors 1 and
-3 are reproduced with their controls; anchor 2 is blocked on a primary source and raises
+The elections calibration project has been run: see [`RESULTS.md`](RESULTS.md). Anchor 1 is a
+partial failure by its own rule until the Poland and Spain control has run (item 1 met, item 2
+partial, item 3 not run). Anchor 3 has located its second mode, but its `heterogeneous_mixture`
+calibration and its external controls have not run. Both were computed before G1 was signed,
+with settings fixed at analysis time rather than pre-registered, so neither counts as a P2
+replication result yet. Anchor 2 is blocked on a primary source and raises
 `NotImplementedError` rather than guessing. The other projects in the programme
 (`aaer`, `china`, `gosplan`) have not been run, and their `analysis/` modules still raise.

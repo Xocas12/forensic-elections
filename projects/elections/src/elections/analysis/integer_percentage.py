@@ -47,8 +47,10 @@ from elections.clean.schema import ELECTIONS
 from elections.features.size import SIZE_BAND_LABELS, iter_size_strata
 
 __all__ = [
+    "MIN_DENOMINATOR_SWEEP",
     "PERCENTAGE_QUANTITIES",
     "integer_percentage_excess",
+    "integer_percentage_excess_by_min_denominator",
     "integer_percentage_excess_by_region",
     "integer_percentage_excess_by_size_band",
 ]
@@ -57,6 +59,11 @@ __all__ = [
 PERCENTAGE_QUANTITIES = ("turnout_boxes", "winner_share")
 
 Quantity = Literal["turnout_boxes", "winner_share"]
+
+#: The denominator floors the national number is re-run at. The headline uses 100, the
+#: paper's exclusion rule; the higher floors show whether the result depends on the small
+#: stations that land on whole percentages honestly (``docs/known_traps.md``, trap 1).
+MIN_DENOMINATOR_SWEEP: tuple[int, ...] = (100, 250, 500, 1000)
 
 #: Which protocol line is the binomial denominator of each quantity. Recorded in every
 #: result's ``settings`` so that a number can never be read without knowing what it is a
@@ -285,3 +292,71 @@ def integer_percentage_excess_by_size_band(
         order = {label: index for index, label in enumerate(SIZE_BAND_LABELS)}
         table = table.sort_values("size_band", key=lambda s: s.map(order)).reset_index(drop=True)
     return table
+
+
+def integer_percentage_excess_by_min_denominator(
+    tidy: pd.DataFrame,
+    *,
+    election: str,
+    quantity: Quantity = "turnout_boxes",
+    floors: tuple[int, ...] = MIN_DENOMINATOR_SWEEP,
+    tolerance: float = 0.05,
+    n_mc: int = 200,
+    seed: int | None = None,
+) -> pd.DataFrame:
+    """The national excess re-run at several denominator floors: the ``min_denominator`` sweep.
+
+    The floor of 100 is a setting, not a finding, and it was fixed without a pre-registration
+    to point to. Re-running the national number at stricter floors shows whether the sign and
+    significance depend on it.
+
+    Parameters
+    ----------
+    tidy : pandas.DataFrame
+        The tidy frame.
+    election : str
+        One of :data:`elections.clean.schema.ELECTIONS`.
+    quantity : {"turnout_boxes", "winner_share"}, default "turnout_boxes"
+        As in :func:`integer_percentage_excess`.
+    floors : tuple of int, default :data:`MIN_DENOMINATOR_SWEEP`
+        The ``min_denominator`` values to run, in the order given.
+    tolerance, n_mc, seed
+        As in :func:`integer_percentage_excess`. The same seed is used at every floor.
+
+    Returns
+    -------
+    pandas.DataFrame
+        One row per floor, with the station count tested and excluded, the observed and
+        expected counts, the excess, ``z``, the normal-approximation ``pvalue`` and the Monte
+        Carlo ``mc_pvalue`` (which cannot go below ``1 / (n_mc + 1)``).
+    """
+    records: list[dict[str, object]] = []
+    for floor in floors:
+        result = integer_percentage_excess(
+            tidy,
+            election=election,
+            quantity=quantity,
+            tolerance=tolerance,
+            min_denominator=int(floor),
+            n_mc=n_mc,
+            seed=seed,
+        )
+        n_stations = int(result.settings["n_stations"])
+        records.append(
+            {
+                "election": election,
+                "quantity": quantity,
+                "min_denominator": int(floor),
+                "n_stations": n_stations,
+                "n_tested": n_stations - int(result.n_excluded_small),
+                "n_excluded_small": int(result.n_excluded_small),
+                "observed": float(result.observed),
+                "expected_mean": float(result.expected_mean),
+                "expected_sd": float(result.expected_sd),
+                "excess": float(result.excess),
+                "z": float(result.test.statistic),
+                "pvalue": float(result.test.pvalue),
+                "mc_pvalue": float(result.test.details["mc_pvalue"]),
+            }
+        )
+    return pd.DataFrame.from_records(records)

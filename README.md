@@ -7,9 +7,12 @@ One of two project repositories that share the
 
 ## Result
 
-Two of the three validation anchors are reproduced on 192,924 precinct protocols from the
-2011 State Duma and 2018 presidential elections. Full report, with the controls and the
-caveats: **[RESULTS.md](RESULTS.md)**.
+Two of the three validation anchors have been run on 192,924 precinct protocols from the
+2011 State Duma and 2018 presidential elections, and neither is fully reproduced yet. Anchor 1
+is a partial failure by its own rule until its Poland and Spain control has run; anchor 3's
+confound check, the `heterogeneous_mixture` calibration, has not run. Both were computed
+before gate G1, with no pre-registration in place. Full report, with the caveats:
+**[RESULTS.md](RESULTS.md)**.
 
 **Anchor 1 — excess mass at integer percentages** (Kobak, Shpilkin and Pshenichnikov 2016).
 Against a per-station binomial null, reported percentages land on whole numbers more often
@@ -22,16 +25,27 @@ than the arithmetic of that station's size allows:
 | 2018 presidential | turnout | +1,089 | 12.15 |
 | 2018 presidential | winner's share | +845 | 10.68 |
 
-The finding survives the control that matters. Small stations hit whole percentages honestly,
-so an arithmetic artefact would be largest among them and vanish among large ones. It runs the
-other way: flat below 250 registered voters and rising with station size, strongest at 1,000
-to 5,000. The regions carrying it are the ones the literature names — Tatarstan, Dagestan,
-Bashkortostan, Karachay-Cherkessia, Kabardino-Balkaria.
+Status by the anchor's own three items: item 1 (significant national excess) is met; item 2
+(regional concentration) is partial; item 3 (the excess absent on the Poland 2010 and Spain
+2011 controls) has not been run. The anchor said all three or a partial failure, so it is a
+partial failure until that control has run. Item 3 is the check that shows the method is not
+detecting arithmetic.
+
+The finding survives an internal size check, which is not a substitute for that control.
+Small stations hit whole percentages honestly, so an arithmetic artefact would be largest
+among them and vanish among large ones. It runs the other way: flat below 250 registered
+voters and rising with station size, strongest at 1,000 to 5,000. Raising the denominator
+floor from 100 to 1,000 voters changes no sign and no significance. The regions near the top
+of the ranking include Tatarstan, Dagestan, Bashkortostan, Karachay-Cherkessia and
+Kabardino-Balkaria.
 
 **Anchor 3 — a second turnout mode** (Klimek et al. 2012). Silverman's critical-bandwidth test
 rejects unimodality in both elections at the bootstrap floor (p = 0.001). The second mode sits
 within two points of complete turnout, and the winner's share there is far above the share at
-the principal mode.
+the principal mode. The confound check has not run: the statistic has not been scored on the
+red team's `heterogeneous_mixture` (honest urban and rural populations calibrated to Russian
+turnout) or on the external controls, so it is not yet known whether honest heterogeneity
+would reject as well.
 
 **Anchor 2 — the comet tail — was not run.** Its estimator has not been read from a primary
 source, so it still raises `NotImplementedError` with that reason in the message. Writing a
@@ -41,7 +55,8 @@ against, which is the failure this project is built to avoid.
 **What is not claimed.** These are distributional anomalies against a stated null, not proof
 about any polling station. The Poland and Spain false-positive controls are still outstanding.
 Anchor 3 does not separate falsification from genuine urban/rural heterogeneity, and does not
-claim to. [RESULTS.md](RESULTS.md) says all of this at greater length.
+claim to. None of it is pre-registered: the settings were fixed at analysis time, before G1.
+[RESULTS.md](RESULTS.md) says all of this at greater length.
 
 ## The programme
 
@@ -144,6 +159,6 @@ Five repositories, one programme. All public.
 |---|---|---|
 | [psephos](https://github.com/Xocas12/psephos) | standalone election anomaly-detection tool, CLI and library | works; 47 tests |
 | [forensics-core](https://github.com/Xocas12/forensics-core) | the shared method library | implemented; 840 tests; used for the result here |
-| [forensic-elections](https://github.com/Xocas12/forensic-elections) | Russian federal elections, the calibration project | **anchors 1 and 3 reproduced**; 914 tests |
+| [forensic-elections](https://github.com/Xocas12/forensic-elections) | Russian federal elections, the calibration project | anchors 1 and 3 run, before G1; anchor 1 a partial failure pending its controls; 914 tests |
 | [forensic-economy](https://github.com/Xocas12/forensic-economy) | accounting enforcement, Chinese provincial statistics, Soviet statistics | method scaffolding; no analysis run yet |
 | [gosplan-env](https://github.com/Xocas12/gosplan-env) | multi-agent environment where reporting pathologies emerge from incentives | specification and tests; environment not yet implemented |
