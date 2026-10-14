@@ -1,6 +1,6 @@
 {
-  "generated": "2026-09-26",
-  "commit": "36c9171",
+  "generated": "2026-10-15",
+  "commit": "22e373b",
   "seed": 20260926,
   "n_mc": 200,
   "n_boot": 999,
@@ -8,6 +8,7 @@
   "tables": [
     "anchor1_by_region.csv",
     "anchor1_by_size_band.csv",
+    "anchor1_min_denominator_sweep.csv",
     "anchor1_national.csv",
     "anchor3_mode_locations.csv",
     "anchor3_unimodality_test.csv"

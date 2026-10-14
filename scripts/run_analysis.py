@@ -92,7 +92,9 @@ def main() -> int:
         return 2
 
     from elections.analysis.integer_percentage import (
+        MIN_DENOMINATOR_SWEEP,
         integer_percentage_excess,
+        integer_percentage_excess_by_min_denominator,
         integer_percentage_excess_by_region,
         integer_percentage_excess_by_size_band,
     )
@@ -129,11 +131,24 @@ def main() -> int:
                     "excess": res.excess,
                     "z": res.test.statistic,
                     "pvalue": res.test.pvalue,
+                    "mc_pvalue": res.test.details["mc_pvalue"],
                 }
             )
             print(f"  anchor1 {election:<20} {quantity:<14} z={res.test.statistic:7.2f}")
     national = pd.DataFrame(national_rows)
     national.to_csv(OUT / "anchor1_national.csv", index=False)
+
+    sweep = pd.concat(
+        [
+            integer_percentage_excess_by_min_denominator(
+                tidy, election=e, quantity=q, n_mc=args.n_mc, seed=args.seed
+            )
+            for e in ELECTIONS
+            for q in QUANTITIES
+        ],
+        ignore_index=True,
+    )
+    sweep.to_csv(OUT / "anchor1_min_denominator_sweep.csv", index=False)
 
     bands = pd.concat(
         [
@@ -242,6 +257,20 @@ def main() -> int:
         "bootstrap resamples for anchor 3. Re-running reproduces the tables exactly."
     )
     a("")
+    a(
+        "**These results were computed before G1.** Gate G1, methods frozen and pre-registered "
+        "([forensics-core #2](https://github.com/Xocas12/forensics-core/issues/2)), blocks the "
+        "P2 replication tasks, and it is not signed: no pre-registration exists in this "
+        "repository or in forensics-core. CONTRACT rule 11 asks for the analysis plan to be "
+        "committed before any project-level result, and the preamble says work that breaks a "
+        "rule does not count. The settings used here were fixed at analysis time instead: the "
+        "denominator floor of 100, the 0.05-point integer tolerance, the size-band edges, the "
+        "choice of Silverman's test, and the 2-point mode bandwidth, which was chosen with "
+        "anchor 1's result in hand. When the pre-registration is written they are to be "
+        "recorded there as settings fixed after the results were seen. Until then nothing "
+        "below counts as a P2 replication result."
+    )
+    a("")
 
     a("## The data")
     a("")
@@ -271,18 +300,57 @@ def main() -> int:
         "stations with a denominator below 100 are excluded and counted."
     )
     a("")
-    a("| election | quantity | stations | excluded | observed | expected | excess | z | p |")
-    a("|---|---|---:|---:|---:|---:|---:|---:|---:|")
+    a("| election | quantity | stations | excluded | observed | expected | excess | z | p | MC p |")
+    a("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|")
     for _, r in national.iterrows():
         a(
             f"| {LABEL[r.election]} | {QLABEL[r.quantity]} | {int(r.n_stations):,} | "
             f"{int(r.n_excluded_small):,} | {r.observed:,.0f} | {r.expected_mean:,.1f} | "
-            f"{r.excess:+,.1f} | {r.z:.2f} | {_fmt_p(r.pvalue)}{_stars(r.pvalue)} |"
+            f"{r.excess:+,.1f} | {r.z:.2f} | {_fmt_p(r.pvalue)}{_stars(r.pvalue)} | "
+            f"{_fmt_p(r.mc_pvalue)} |"
         )
     a("")
     a(
-        "**Item 1 of the anchor is reproduced**: the excess is positive and significant in "
-        "both elections and on both quantities."
+        "`p` is the normal approximation to the Monte Carlo null; `MC p` is the plain Monte "
+        f"Carlo p-value, which cannot go below 1/({args.n_mc}+1)."
+    )
+    a("")
+    a(
+        "**Anchor 1 is a partial failure by its own rule.** `docs/validation_anchors.md` fixed "
+        "what counts as reproduced before the run: a significant positive excess nationally in "
+        "both elections, the excess concentrated in the regions the paper names, and the "
+        "excess absent on the Poland 2010 and Spain 2011 controls; all three, or the "
+        "replication is reported as a partial failure. Item 1 is met: the excess is positive "
+        "and significant in both elections and on both quantities. Item 2 is partial: the "
+        "regional table below is a ranking against a list of regions this repository has not "
+        "recorded from the paper. Item 3 has not been run, because the control tables are not "
+        "in `data/raw`. The anchor stays a partial failure until that control has run."
+    )
+    a("")
+    a("### The denominator floor")
+    a("")
+    a(
+        "Stations with a denominator below the floor are excluded. The floor of 100 is a "
+        "setting, not a finding, so the national number is re-run at stricter floors (z, then "
+        "the Monte Carlo p in brackets):"
+    )
+    a("")
+    head = " | ".join(f"floor {f:,}" for f in MIN_DENOMINATOR_SWEEP)
+    a(f"| election | quantity | {head} |")
+    a("|---|---|" + "---:|" * len(MIN_DENOMINATOR_SWEEP))
+    for election in ELECTIONS:
+        for quantity in QUANTITIES:
+            sub = sweep[(sweep.election == election) & (sweep.quantity == quantity)]
+            cells = []
+            for floor in MIN_DENOMINATOR_SWEEP:
+                r = sub[sub.min_denominator == floor].iloc[0]
+                cells.append(f"{r.z:.2f} ({_fmt_p(r.mc_pvalue)})")
+            a(f"| {LABEL[election]} | {QLABEL[quantity]} | " + " | ".join(cells) + " |")
+    a("")
+    a(
+        "Full table, with the stations tested and excluded at each floor: "
+        "[`results/anchor1_min_denominator_sweep.csv`]"
+        "(projects/elections/results/anchor1_min_denominator_sweep.csv)."
     )
     a("")
 
@@ -313,7 +381,9 @@ def main() -> int:
         "The excess runs the other way: flat in the smallest tested band and rising with "
         "station size, strongest among stations of 1,000 to 5,000 voters, where integer "
         "percentages are not arithmetically favoured. Trap 1 is ruled out rather than assumed "
-        "away."
+        "away. This is an internal check on the Russian tables; it does not stand in for the "
+        "external Poland and Spain control, which is the one that shows the method is not "
+        "detecting arithmetic."
     )
     a("")
 
@@ -399,6 +469,19 @@ def main() -> int:
     )
     a("")
     a(
+        "**Anchor 3's confound check has not run.** The work order for this anchor puts its "
+        "real content in the confound, and asks for two things that have not been done. The "
+        "first is the `heterogeneous_mixture` calibration: run the statistic on the "
+        "forensics-core red team's honest mixture, with urban and rural populations "
+        "calibrated to Russian turnout, and report at what separation it fires on honest data. "
+        "forensics-core hands that scoring to this project, and `heterogeneous_mixture` "
+        "appears nowhere in this repository. The second is the same statistic on the two "
+        "external controls. Until both have run, the critical-bandwidth p-value is a rejection "
+        "of a unimodal null and says nothing about whether an honest two-population mixture "
+        "would reject as well."
+    )
+    a("")
+    a(
         "**Known trap 2 applies and is not resolved here.** Bimodality alone is not evidence "
         "of falsification: urban and rural heterogeneity, and republics with different "
         "mobilisation patterns, produce a second mode in honest elections too. What the table "
@@ -438,12 +521,17 @@ def main() -> int:
     a(
         "- **The false-positive control is outstanding.** Anchor 1 item 3 asks for the excess "
         "to vanish on the Poland 2010 and Spain 2011 control tables. Those tables are not in "
-        "`data/raw`, so the control has not been run. Until it is, the size-band trend above "
-        "is the internal evidence that the test is not merely detecting arithmetic."
+        "`data/raw`, so the control has not been run, and anchor 1 is a partial failure until "
+        "it is. The size-band trend above is internal evidence only."
     )
     a(
         "- **Anchor 3 does not separate falsification from heterogeneity**, for the reason in "
-        "trap 2."
+        "trap 2, and its `heterogeneous_mixture` calibration and external controls have not "
+        "run."
+    )
+    a(
+        "- **Nothing here is pre-registered.** Every number above was computed before G1, "
+        "with settings fixed at analysis time."
     )
     a("")
     a("## Reproducing")
