@@ -13,6 +13,7 @@ report says so rather than leaving a gap the reader has to notice.
 Usage
 -----
     uv run python scripts/run_analysis.py [--n-mc 200] [--n-boot 999] [--seed 20260926]
+        [--n-rep 20] [--n-mc-bias 50]
 """
 
 from __future__ import annotations
@@ -79,6 +80,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--n-mc", type=int, default=200, help="Monte Carlo draws for anchor 1")
     parser.add_argument("--n-boot", type=int, default=999, help="bootstrap resamples for anchor 3")
+    parser.add_argument(
+        "--n-rep", type=int, default=20, help="honest-data replicates for the anchor-1 bias"
+    )
+    parser.add_argument(
+        "--n-mc-bias", type=int, default=50, help="null draws inside each honest replicate"
+    )
     parser.add_argument("--seed", type=int, default=20260926)
     parser.add_argument("--no-figures", action="store_true")
     args = parser.parse_args()
@@ -92,9 +99,11 @@ def main() -> int:
         return 2
 
     from elections.analysis.integer_percentage import (
+        PAPER_EXCLUSION_PCT,
         integer_percentage_excess,
         integer_percentage_excess_by_region,
         integer_percentage_excess_by_size_band,
+        integer_percentage_honest_bias,
     )
     from elections.analysis.turnout_bimodality import (
         MODE_BANDWIDTH_PP,
@@ -110,6 +119,26 @@ def main() -> int:
     print(f"loaded {len(tidy):,} precinct rows")
 
     # ---------------------------------------------------------------- anchor 1
+    # The bias of the procedure on honest data at the observed shares and real denominators,
+    # nationally ("all") and per size band. It is printed beside every excess it applies to.
+    bias = pd.concat(
+        [
+            integer_percentage_honest_bias(
+                tidy,
+                election=e,
+                quantity=q,
+                n_rep=args.n_rep,
+                n_mc=args.n_mc_bias,
+                seed=args.seed,
+            )
+            for e in ELECTIONS
+            for q in QUANTITIES
+        ],
+        ignore_index=True,
+    )
+    bias_cols = ["honest_bias", "honest_bias_se", "honest_bias_per_unit", "honest_z_mean"]
+    print(f"  anchor1 honest-data bias: {args.n_rep} replicates per election and quantity")
+
     national_rows = []
     for election in ELECTIONS:
         for quantity in QUANTITIES:
@@ -121,7 +150,9 @@ def main() -> int:
                     "election": election,
                     "quantity": quantity,
                     "n_stations": res.settings["n_stations"],
+                    "n_excluded_high": res.settings["n_excluded_high"],
                     "n_excluded_small": res.n_excluded_small,
+                    "n_tested": res.test.n,
                     "denominator": res.settings["denominator_column"],
                     "observed": res.observed,
                     "expected_mean": res.expected_mean,
@@ -133,6 +164,11 @@ def main() -> int:
             )
             print(f"  anchor1 {election:<20} {quantity:<14} z={res.test.statistic:7.2f}")
     national = pd.DataFrame(national_rows)
+    national = national.merge(
+        bias.loc[bias.stratum == "all", ["election", "quantity", *bias_cols]],
+        on=["election", "quantity"],
+        how="left",
+    )
     national.to_csv(OUT / "anchor1_national.csv", index=False)
 
     bands = pd.concat(
@@ -144,6 +180,13 @@ def main() -> int:
             for q in QUANTITIES
         ],
         ignore_index=True,
+    )
+    bands = bands.merge(
+        bias.loc[bias.stratum != "all", ["election", "quantity", "stratum", *bias_cols]].rename(
+            columns={"stratum": "size_band"}
+        ),
+        on=["election", "quantity", "size_band"],
+        how="left",
     )
     bands.to_csv(OUT / "anchor1_by_size_band.csv", index=False)
 
@@ -267,17 +310,35 @@ def main() -> int:
         "Kobak, Shpilkin and Pshenichnikov (2016), *AOAS* 10(1), 54-73. Under the null each "
         "station's numerator is redrawn as `Binomial(denominator, observed share)`, so the "
         "comparison is against the rounding that honest arithmetic produces at that station's "
-        'size. A station counts as "on an integer" within 0.05 percentage points, and '
-        "stations with a denominator below 100 are excluded and counted."
+        'size. A station counts as "on an integer" within 0.05 percentage points. Before '
+        "counting, every station whose turnout or winner's share is over "
+        f"{PAPER_EXCLUSION_PCT:g}% is excluded, as the paper does (section 3.1): 100% is always "
+        "an integer, so without that rule the null predicts more hits at 100 than honest data "
+        "produce and the excess comes out biased low. Stations with a denominator below 100 "
+        "are then excluded as well. Both counts are shown."
     )
     a("")
-    a("| election | quantity | stations | excluded | observed | expected | excess | z | p |")
-    a("|---|---|---:|---:|---:|---:|---:|---:|---:|")
+    a(
+        "Every row also carries the **honest-data bias**: the mean excess the same procedure "
+        "reports when each station's numerators are redrawn as binomial noise around the "
+        "shares the data report, on the real denominators, so that there is nothing to find "
+        f"({args.n_rep} replicates, {args.n_mc_bias} null draws each, mean ± standard error). "
+        "A calibrated test gives a bias near zero; whatever is left is the calibration error "
+        "that remains, printed next to the number it would distort."
+    )
+    a("")
+    a(
+        "| election | quantity | stations | excluded >99% | excluded small | observed | "
+        "expected | excess | honest-data bias | z | p |"
+    )
+    a("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
     for _, r in national.iterrows():
         a(
             f"| {LABEL[r.election]} | {QLABEL[r.quantity]} | {int(r.n_stations):,} | "
-            f"{int(r.n_excluded_small):,} | {r.observed:,.0f} | {r.expected_mean:,.1f} | "
-            f"{r.excess:+,.1f} | {r.z:.2f} | {_fmt_p(r.pvalue)}{_stars(r.pvalue)} |"
+            f"{int(r.n_excluded_high):,} | {int(r.n_excluded_small):,} | {r.observed:,.0f} | "
+            f"{r.expected_mean:,.1f} | {r.excess:+,.1f} | "
+            f"{r.honest_bias:+,.1f} ± {r.honest_bias_se:,.1f} | {r.z:.2f} | "
+            f"{_fmt_p(r.pvalue)}{_stars(r.pvalue)} |"
         )
     a("")
     a(
@@ -293,22 +354,28 @@ def main() -> int:
         "turnout is a multiple of 0.5 points. A pooled national statistic is therefore not a "
         "result until it is shown to survive size conditioning. If the excess were an "
         "arithmetic artefact it would be **largest** in the smallest band and vanish in the "
-        "largest. The winner's-share table:"
+        "largest. Both quantities, with the honest-data bias per station beside the excess "
+        "per station:"
     )
     a("")
     for election in ELECTIONS:
-        sub = bands[(bands.election == election) & (bands.quantity == "winner_share")]
-        a(f"**{LABEL[election]}**")
-        a("")
-        a("| size band | stations | tested | excess | excess per station | z | p |")
-        a("|---|---:|---:|---:|---:|---:|---:|")
-        for _, r in sub.iterrows():
+        for quantity in QUANTITIES:
+            sub = bands[(bands.election == election) & (bands.quantity == quantity)]
+            a(f"**{LABEL[election]}, {QLABEL[quantity]}**")
+            a("")
             a(
-                f"| {r.size_band} | {int(r.n_stations):,} | {int(r.n_tested):,} | "
-                f"{r.excess:+.1f} | {r.excess_per_unit:+.4f} | {r.z:.2f} | "
-                f"{_fmt_p(r.pvalue)}{_stars(r.pvalue)} |"
+                "| size band | stations | excluded >99% | tested | excess | excess per station "
+                "| honest-data bias per station | z | p |"
             )
-        a("")
+            a("|---|---:|---:|---:|---:|---:|---:|---:|---:|")
+            for _, r in sub.iterrows():
+                a(
+                    f"| {r.size_band} | {int(r.n_stations):,} | {int(r.n_excluded_high):,} | "
+                    f"{int(r.n_tested):,} | {r.excess:+.1f} | {r.excess_per_unit:+.4f} | "
+                    f"{r.honest_bias_per_unit:+.4f} | {r.z:.2f} | "
+                    f"{_fmt_p(r.pvalue)}{_stars(r.pvalue)} |"
+                )
+            a("")
     a(
         "The excess runs the other way: flat in the smallest tested band and rising with "
         "station size, strongest among stations of 1,000 to 5,000 voters, where integer "
@@ -328,12 +395,12 @@ def main() -> int:
         sub = regions[regions.election == election].head(10)
         a(f"**{LABEL[election]}**")
         a("")
-        a("| rank | region | stations | excess per station | z |")
-        a("|---:|---|---:|---:|---:|")
+        a("| rank | region | stations tested | excluded >99% | excess per station | z |")
+        a("|---:|---|---:|---:|---:|---:|")
         for _, r in sub.iterrows():
             a(
                 f"| {int(r['rank'])} | {r.region} | {int(r.n):,} | "
-                f"{r.excess_per_unit:+.4f} | {r.z:.2f} |"
+                f"{int(r.n_excluded_high):,} | {r.excess_per_unit:+.4f} | {r.z:.2f} |"
             )
         a("")
     a(
@@ -464,6 +531,9 @@ def main() -> int:
         "seed": args.seed,
         "n_mc": args.n_mc,
         "n_boot": args.n_boot,
+        "anchor1_exclude_over_pct": PAPER_EXCLUSION_PCT,
+        "anchor1_honest_bias_n_rep": args.n_rep,
+        "anchor1_honest_bias_n_mc": args.n_mc_bias,
         "rows": len(tidy),
         "tables": sorted(p.name for p in OUT.glob("*.csv")),
         "figures": figures_written,
