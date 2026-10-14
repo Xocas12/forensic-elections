@@ -28,10 +28,13 @@ other way: flat below 250 registered voters and rising with station size, strong
 to 5,000. The regions carrying it are the ones the literature names — Tatarstan, Dagestan,
 Bashkortostan, Karachay-Cherkessia, Kabardino-Balkaria.
 
-**Anchor 3 — a second turnout mode** (Klimek et al. 2012). Silverman's critical-bandwidth test
-rejects unimodality in both elections at the bootstrap floor (p = 0.001). The second mode sits
-within two points of complete turnout, and the winner's share there is far above the share at
-the principal mode.
+**Anchor 3 — a second turnout mode** (Klimek et al. 2012). Turnout is bounded, so the density
+is reflected at 0 and 100. Silverman's critical-bandwidth test rejects unimodality in both
+elections at the bootstrap floor (p = 0.001). In both elections, weighting stations equally or
+by electorate, the highest-turnout mode is a maximum at 100 itself, where a station bootstrap
+puts it in every resample. The winner's share in [97.5, 100] is 83-84% in 2011 and 88% in
+2018, against 34-38% and 73% at the principal mode. Further local maxima sit at 92.6 (2011,
+by electorate), 93.8 (2018, by electorate) and 80.5 (2018, by station).
 
 **Anchor 2 — the comet tail — was not run.** Its estimator has not been read from a primary
 source, so it still raises `NotImplementedError` with that reason in the message. Writing a
