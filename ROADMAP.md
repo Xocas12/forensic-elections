@@ -148,7 +148,7 @@ tables and its output is in [`RESULTS.md`](RESULTS.md), not that code exists for
 | 7 | Populate the elections notch catalogue | P1 | open - round vote shares and round turnout are this project's instance of the unifying hypothesis |
 | 8 | Replicate the integer-percentage sawtooth, conditioned on precinct size | P2 | **done** - anchor 1; significant on both quantities in both elections, and the excess rises with station size |
 | 9 | Replicate the comet tail | P2 | blocked on task 4 - the estimator has not been read from a primary source, and the function says so |
-| 10 | Replicate turnout bimodality | P2 | **done** - anchor 3; unimodality rejected at the bootstrap floor, second mode within two points of complete turnout |
+| 10 | Replicate turnout bimodality | P2 | **done** - anchor 3; unimodality rejected at the bootstrap floor; with the density reflected at 0 and 100, the highest-turnout mode is a maximum at 100 in both elections under both weightings |
 | 11 | Decompose detection power by method family | P2 | open - the project's actual research question, and the reason the anchors come first |
 
 Task 11 is the research contribution. Tasks 8 and 10 reproduce what the literature already

@@ -1,0 +1,5 @@
+election,turnout_basis,weight_by,mode_turnout_pct,ci_low,ci_high,level,share_at_boundary,n_boot,bandwidth_pp
+2011-duma,boxes,registered,100.0,100.0,100.0,0.95,1.0,199,2.0
+2011-duma,boxes,stations,100.0,100.0,100.0,0.95,1.0,199,2.0
+2018-presidential,boxes,registered,100.0,100.0,100.0,0.95,1.0,199,2.0
+2018-presidential,boxes,stations,100.0,100.0,100.0,0.95,1.0,199,2.0
